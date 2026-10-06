@@ -111,35 +111,25 @@ class Car(Node):
         self.u[0] = throttle_input
 
     def update_x_dot(self):
-        """Computes the state derivative vector x_dot = f(x, u).
+        theta = self.x[2]
+        v = self.x[3]
+        throttle = self.u[0]
+        delta = self.u[1]
+        accel = (self.k_a * throttle
+        - self.c_drag * v * abs(v)  
+        - self.c_roll * v)           
+        self.x_dot[0] = v * math.cos(theta)
+        self.x_dot[1] = v * math.sin(theta)
+        self.x_dot[2] = (v / self.wheelbase_length) * math.tan(delta)
+        self.x_dot[3] = accel
 
-        State Vector self.x (R^4):
-            self.x[0]: x position (m) [rear axle center]
-            self.x[1]: y position (m) [rear axle center]
-            self.x[2]: heading theta / yaw angle (rad, 0 = +x axis)
-            self.x[3]: longitudinal velocity v (m/s)
-
-        Control Input Vector self.u (R^2):
-            self.u[0]: normalized throttle/brake command u_throttle in [-1.0, 1.0]
-            self.u[1]: front steering angle delta in radians (positive = left)
-
-        Vehicle Physical Parameters:
-            self.wheelbase_length (L): 1.25 m
-            self.k_a: 4.0 m/s^2 (powertrain acceleration scaling gain)
-            self.c_drag: 0.005 (aerodynamic drag coefficient)
-            self.c_roll: 0.05 (rolling resistance coefficient)
-        """
-        # TODO: Milestone 2.2 — Extended Kinematic Bicycle Equations of Motion
-        # This simulates the physics of the car moving and turning in the real world.
-        # Implement the continuous-time state derivatives based on throttle and steering.
-        pass
 
     def update_x(self):
-        """Integrates state forward using discrete Forward Euler numerical integration."""
-        # TODO: Milestone 2.3 — Forward Euler Integration & Physical Constraints
-        # This moves the simulation forward in time step-by-step.
-        # Advance the state numerically and apply realistic constraints like max speed.
-        pass
+        self.x = self.x + self.x_dot * self.dt
+        self.x[2] = math.atan2(math.sin(self.x[2]), math.cos(self.x[2]))
+        self.x[3] = float(np.clip(self.x[3], 0.0, self.max_speed))
+
+        
 
     def update_simulation(self):
         """Timer callback coordinating physics update and telemetry broadcast."""
