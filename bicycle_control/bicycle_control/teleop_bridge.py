@@ -17,8 +17,8 @@ from std_msgs.msg import Float32
 # ==============================================================================
 # Phase 2 (Milestone 4): Uncomment these imports when upgrading to cruise control
 # ==============================================================================
-# from nav_msgs.msg import Odometry
-# from bicycle_control.longitudinal_pid import PIDLongitudinalController
+from nav_msgs.msg import Odometry
+from bicycle_control.longitudinal_pid import PIDLongitudinalController
 
 
 class TeleopBridge(Node):
@@ -51,16 +51,18 @@ class TeleopBridge(Node):
         self.target_vel = 0.0
         self.last_cmd_time = self.get_clock().now()
 
-        # TODO: Phase 2 (Milestone 4.2) — Closed-Loop Cruise Control Setup
-        # This allows the car to automatically hold a steady speed instead of requiring manual throttle.
-        # Initialize the PID speed controller and subscribe to odometry data.
+        self.current_speed = 0.0
+        self.pid = PIDLongitudinalController(
+            kp=1.0, ki=0.2, kd=0.05, dt=0.1, integral_limit=5.0)
+        self.state_sub = self.create_subscription(
+            Odometry, '/state', self.odom_callback, 10)
 
         # Publish loop at 10 Hz
         self.timer = self.create_timer(0.1, self.publish_commands)
 
-    # def odom_callback(self, msg: Odometry):
-    #     """Milestone 4.2: Extracts vehicle forward speed from /state odometry."""
-    #     pass
+    def odom_callback(self, msg: Odometry):
+        """Milestone 4.2: Extracts vehicle forward speed from /state odometry."""
+        self.current_speed = float(msg.twist.twist.linear.x)
 
     def cmd_callback(self, msg: Twist):
         throttle = msg.linear.x / self.max_linear_vel
@@ -68,7 +70,7 @@ class TeleopBridge(Node):
 
         self.current_throttle = float(np.clip(throttle, -1.0, 1.0))
         self.current_steer = float(np.clip(steer, -self.max_steer_rad, self.max_steer_rad))
-        self.target_vel = float(msg.linear.x)   # kept for the cruise controller in Milestone 4
+        self.target_vel = max(0.0, float(msg.linear.x))   # kept for the cruise controller in Milestone 4
 
         # Feed the watchdog
         self.last_cmd_time = self.get_clock().now()
@@ -78,9 +80,19 @@ class TeleopBridge(Node):
     def publish_commands(self):
         age = (self.get_clock().now() - self.last_cmd_time).nanoseconds * 1e-9
         if age > self.auto_zero_timeout:
-            self.current_throttle = 0.0
             self.current_steer = 0.0
             self.target_vel = 0.0
+            if not self.use_cruise_control:
+                self.current_throttle = 0.0
+
+        if self.use_cruise_control:
+            # Closed loop: linear.x is a target speed in m/s
+            if self.target_vel == 0.0 and self.current_speed < 0.05:
+                self.pid.reset()
+                self.current_throttle = 0.0
+            else:
+                self.current_throttle = self.pid.compute(
+                    self.target_vel, self.current_speed)
 
         throttle_msg = Float32()
         throttle_msg.data = float(self.current_throttle)

@@ -27,15 +27,48 @@ class PIDLongitudinalController:
         self.integral = 0.0
         self.prev_error = 0.0
 
+        self.prev_vel = None       
+        self.prev_output = 0.0     
+        self.max_step = 0.3         
+
+
     def compute(self, target_vel, current_vel):
-        """Computes normalized throttle/braking effort in [-1.0, 1.0]."""
-        # TODO: Milestone 4.1 — Longitudinal PID Speed Control & Anti-Windup
-        # This is the speed regulator. Because the car has drag, simply setting
-        # a target speed isn't enough — it needs closed-loop control.
-        # Implement a PID controller on the velocity error with anti-windup on the integrator.
-        pass
+        error = target_vel - current_vel
+        p_term = self.kp * error
+        if self.prev_vel is None:
+            d_meas = 0.0
+        else:
+            d_meas = (current_vel - self.prev_vel) / self.dt
+        d_term = -self.kd * d_meas
+        self.prev_vel = current_vel
+
+        # Anti-windup (conditional integration): do not integrate while the
+        # output is saturated and the error would push it further into saturation.
+        u_pre = p_term + self.ki * self.integral + d_term
+        winding_up = ((u_pre > self.max_throttle and error > 0.0) or
+                      (u_pre < -self.max_brake and error < 0.0))
+        if not winding_up:
+            self.integral += error * self.dt
+            # Hard clamp on the integral as a second safeguard
+            self.integral = float(np.clip(self.integral,
+                                          -self.integral_limit, self.integral_limit))
+
+        u = p_term + self.ki * self.integral + d_term
+
+        # Saturate to actuator limits
+        u = float(np.clip(u, -self.max_brake, self.max_throttle))
+
+        # Smooth the actuator output with a rate limit
+        u = float(np.clip(u, self.prev_output - self.max_step,
+                          self.prev_output + self.max_step))
+
+        self.prev_output = u
+        self.prev_error = error
+        return u
+
 
     def reset(self):
-        """Resets integrator and previous error state."""
+        self.prev_vel = None
+        self.prev_output = 0.0
         self.integral = 0.0
         self.prev_error = 0.0
