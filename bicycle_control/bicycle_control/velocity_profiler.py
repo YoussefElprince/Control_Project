@@ -15,9 +15,14 @@ class VelocityProfiler:
         self.max_lat_accel = max_lat_accel
 
     def compute_target_speed(self, kappa, fallback_speed=None):
-        """Calculates curvature-limited velocity: v_max = sqrt(a_lat_max / |kappa|)."""
-        # TODO: Milestone 5.1 — Curvature-Limited Velocity Profiler
-        # This controls how fast the car drives based on the road shape.
-        # It slows the car down in sharp turns to prevent slipping.
-        # Implement the formula to calculate safe speed from curvature, and clamp it.
-        pass
+        if kappa is None or not math.isfinite(kappa):
+            return fallback_speed if fallback_speed is not None else self.default_speed
+
+        k = abs(kappa)
+        if k < 1e-4:
+            v = self.max_speed                       # straight: no curvature limit
+        else:
+            v = math.sqrt(self.max_lat_accel / k)    # v = sqrt(a_lat_max / |kappa|)
+
+        # Clamp: never above max_speed, and keep a 1 m/s floor so the car never stalls in a hairpin
+        return max(1.0, min(self.max_speed, v))

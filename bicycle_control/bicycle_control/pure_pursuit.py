@@ -19,23 +19,37 @@ class PurePursuitController:
         self.max_steer_rad = max_steer_rad
 
     def compute_lookahead(self, v):
-        """Adaptive lookahead distance: Ld = clip(kv * v + l_min, l_min, l_max)."""
-        # TODO: Milestone 5.3 Step 1 — Adaptive Lookahead Horizon
-        # The car looks further ahead at higher speeds to plan smoother turns.
-        # Implement the speed-scaled lookahead formula and clamp it to the allowed range.
-        pass
+        return float(np.clip(self.kv * abs(v) + self.l_min, self.l_min, self.l_max))
 
     def find_target_waypoint(self, x, y, path_points, lookahead):
-        """Searches along path for the target waypoint at lookahead distance."""
-        # TODO: Milestone 5.3 Step 2 — Target Waypoint Selection
-        # This selects the goal point the car will steer toward.
-        # Find the nearest waypoint on the path, then walk forward until
-        # you reach one that is at least 'lookahead' meters away.
-        pass
+        n = len(path_points)
+        if n == 0:
+            return 0, None
+
+        # Nearest waypoint to the car
+        nearest = min(range(n),
+                      key=lambda i: (path_points[i][0] - x) ** 2 + (path_points[i][1] - y) ** 2)
+
+        # Walk forward until a waypoint is at least `lookahead` meters away
+        for k in range(n):
+            i = (nearest + k) % n
+            if math.hypot(path_points[i][0] - x, path_points[i][1] - y) >= lookahead:
+                return i, path_points[i]
+
+        return nearest, path_points[nearest]
 
     def compute_steering(self, x, y, yaw, target_pt, lookahead):
-        """Computes steering angle in radians using Pure Pursuit geometry."""
-        # TODO: Milestone 5.3 Steps 3 & 4 — Coordinate Transformation & Arc Law
-        # This is the core of Pure Pursuit: transform the target into the vehicle's
-        # local frame, then use the arc geometry formula to compute the steering angle.
-        pass
+        if target_pt is None:
+            return 0.0
+
+        dx = target_pt[0] - x
+        dy = target_pt[1] - y
+
+        local_x = math.cos(yaw) * dx + math.sin(yaw) * dy
+        local_y = -math.sin(yaw) * dx + math.cos(yaw) * dy
+
+        alpha = math.atan2(local_y, local_x)
+        ld = max(math.hypot(dx, dy), 1e-3)
+
+        delta = math.atan2(2.0 * self.L * math.sin(alpha), ld)
+        return float(np.clip(delta, -self.max_steer_rad, self.max_steer_rad))

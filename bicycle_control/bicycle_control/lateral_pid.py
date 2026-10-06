@@ -28,21 +28,24 @@ class LateralPIDController:
         self.prev_cte = 0.0
 
     def compute_steering(self, cte, heading_err):
-        """Computes front wheel steering angle delta in radians.
+        d_cte = (cte - self.prev_cte) / self.dt
+        self.prev_cte = cte
 
-        Args:
-            cte: Signed cross-track error in meters (positive = vehicle is left of path).
-            heading_err: Heading error in radians (psi_vehicle - psi_path).
+        # Output before the integral update, used for the anti-windup decision
+        u_pre = -(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte) \
+                - self.k_yaw * heading_err
 
-        Returns:
-            delta_rad: Commanded front steering angle in radians [-max_steer_rad, max_steer_rad].
-        """
-        # TODO: Milestone 5.2 — Reactive Lateral PID Controller
-        # This is the lateral steering controller. It corrects for how far the car
-        # is off the path (CTE) and how misaligned its heading is.
-        # Implement PID on the CTE with anti-windup, add a heading correction term,
-        # and clamp the output to the steering limits.
-        pass
+        # Anti-windup: skip integration while saturated and the error pushes deeper into saturation
+        saturated = abs(u_pre) >= self.max_steer_rad
+        if not (saturated and cte * u_pre < 0.0):
+            self.integral_cte += cte * self.dt
+            self.integral_cte = float(np.clip(self.integral_cte,
+                                              -self.integral_limit, self.integral_limit))
+
+        delta = -(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte) \
+                - self.k_yaw * heading_err
+
+        return float(np.clip(delta, -self.max_steer_rad, self.max_steer_rad))
 
     def reset(self):
         """Resets integrator and previous error state."""

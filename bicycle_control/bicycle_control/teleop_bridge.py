@@ -70,12 +70,8 @@ class TeleopBridge(Node):
 
         self.current_throttle = float(np.clip(throttle, -1.0, 1.0))
         self.current_steer = float(np.clip(steer, -self.max_steer_rad, self.max_steer_rad))
-        self.target_vel = max(0.0, float(msg.linear.x))   # kept for the cruise controller in Milestone 4
-
-        # Feed the watchdog
+        self.target_vel = max(0.0, float(msg.linear.x))
         self.last_cmd_time = self.get_clock().now()
-
-
 
     def publish_commands(self):
         age = (self.get_clock().now() - self.last_cmd_time).nanoseconds * 1e-9
