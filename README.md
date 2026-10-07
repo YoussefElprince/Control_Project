@@ -515,18 +515,28 @@ ros2 run plotjuggler plotjuggler
 
 ### 9.4 Manual driving and cruise control (Milestones 2–4)
 
-With the base simulation running:
+Run the simulation with the teleoperation bridge enabled in one terminal:
 
 ```bash
-# Direct actuator commands (verify the physics)
-ros2 topic pub /throttle std_msgs/msg/Float64 "{data: 0.5}" -r 10
-ros2 topic pub /steer std_msgs/msg/Float64 "{data: 0.2}" -r 10
+source ~/control_ros2_ws/install/setup.bash
+ros2 launch bicycle_sim bicycle_sim.launch.py controller:=teleop
+```
 
-# Interactive keyboard teleoperation
+In a **second terminal**, source the workspace and start the keyboard node:
+
+```bash
+source ~/control_ros2_ws/install/setup.bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
-The teleoperation bridge converts the `Twist` commands into throttle and steering, and the linear velocity is used as the target speed of the longitudinal PID. If no command is received for more than 0.5 s, the watchdog stops the car.
+The launch command occupies its terminal, so the keyboard node must run in a separate interactive terminal. The bridge subscribes to `/cmd_vel` and converts its `Twist` commands into throttle and steering. If no command is received for more than 0.5 s, the watchdog stops the car. The bridge is not started when `controller` is left at its default value, `none`.
+
+For a direct actuator check (not at the same time as teleoperation), publish `Float32` commands:
+
+```bash
+ros2 topic pub /throttle std_msgs/msg/Float32 "{data: 0.5}" -r 10
+ros2 topic pub /steer std_msgs/msg/Float32 "{data: 0.2}" -r 10
+```
 
 ### 9.5 Autonomous driving (Milestone 5)
 
