@@ -2,10 +2,6 @@
 
 A ROS 2 project in which a simulated self-driving car (extended kinematic bicycle model) is controlled around a racetrack. The car must stay on the reference path, regulate its speed, and complete laps quickly and accurately. Four steering/speed strategies are implemented and benchmarked: **Lateral PID**, **Pure Pursuit**, **Extended Kinematic MPC**, plus a longitudinal **PID cruise controller** and a **curvature-based velocity profiler**.
 
-Repository: https://github.com/Dawy007/Control_Project
-
-![Bicycle Gym demo](assets/demo.gif)
-
 ---
 
 ## 1. Student Information
