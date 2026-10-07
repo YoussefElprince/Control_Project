@@ -337,7 +337,7 @@ class LapAnalyzer(Node):
         for s in self.lap_stats:
             rows.append('%3d | %8.2f | %8.3f | %7.3f | %7.3f | %6.2f | %5.2f | %8.1f' % (
                 s['lap'], s['lap_time'], s['mean_cte'], s['rms_cte'], s['max_cte'],
-                s['mean_speed'], s['max_speed'], s['lap_odometer']))
+                s['mean_speed'], s['max_speed']))
         rows.append('Best lap: %.2f s | Top speed: %.2f m/s | Laps: %d' % (
             self.best_lap_time, self.global_max_speed, self.lap_count))
         print('\n' + '\n'.join(rows) + '\n')
