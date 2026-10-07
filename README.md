@@ -2,6 +2,10 @@
 
 A ROS 2 project in which a simulated self-driving car (extended kinematic bicycle model) is controlled around a racetrack. The car must stay on the reference path, regulate its speed, and complete laps quickly and accurately. Four steering/speed strategies are implemented and benchmarked: **Lateral PID**, **Pure Pursuit**, **Extended Kinematic MPC**, plus a longitudinal **PID cruise controller** and a **curvature-based velocity profiler**.
 
+Repository: https://github.com/Dawy007/Control_Project
+
+![Bicycle Gym demo](assets/demo.gif)
+
 ---
 
 ## 1. Student Information
@@ -97,27 +101,17 @@ The three lateral controllers share the same interface (path + vehicle state in,
 
 | File | Package | Milestone | Purpose |
 |---|---|---|---|
-| `bicycle_model.py` | `bicycle_sim` | 2 | Equations of motion, Euler integration, heading wrapping, speed clamping |
-| `sim_node.py` | `bicycle_sim` | 1–2 | Simulator ROS node: subscribes to `/throttle` and `/steer`, publishes vehicle state |
+| `bicycle_model.py` | `bicycle_sim` | 2 | `Car` node: extended kinematic bicycle model with powertrain dynamics, Euler integration, heading wrapping and speed clamping; subscribes to `/throttle` and `/steer`, publishes `/state`, `/joint_states` and TF |
+| `sim_node.py` | `bicycle_sim` | 1–2 | Entry point that runs the simulator node |
 | `teleop_bridge.py` | `bicycle_control` | 3 | `Twist` → throttle/steer with 0.5 s watchdog |
 | `longitudinal_pid.py` | `bicycle_control` | 4 | Speed PID with anti-windup |
 | `velocity_profiler.py` | `bicycle_control` | 5.1 | Curvature and speed limits along the path |
 | `lateral_pid.py` | `bicycle_control` | 5.2 | Cross-track + heading feedback |
 | `pure_pursuit.py` | `bicycle_control` | 5.3 | Adaptive look-ahead geometric steering |
-| `mpc.py` | `bicycle_control` | 5.4 | Frenet-frame constrained MPC |
+| `mpc.py` | `bicycle_control` | 5.4 | Nonlinear MPC (SciPy SLSQP) with reference-frame errors |
 | `controller_node.py` | `bicycle_control` | 5 | Node that ties the profiler, longitudinal PID and the selected lateral controller together |
 | `track.py`, `path_gen.py` | `track_environment` | — | Track CSV loading, closing the loop, path generation and publishing |
 | `lap_analyzer.py` | `track_environment` | 5.5 | Lap timing, telemetry topics, RViz dashboard markers |
-
----|---|---|
-| `bicycle_model.py` | 2 | Equations of motion, Euler integration, heading wrapping, speed clamping |
-| `teleop_bridge.py` | 3 | `Twist` → throttle/steer with 0.5 s watchdog |
-| `longitudinal_pid.py` | 4 | Speed PID with anti-windup |
-| velocity profiler | 5.1 | Curvature and speed limits along the path |
-| `lateral_pid.py` | 5.2 | Cross-track + heading feedback |
-| `pure_pursuit.py` | 5.3 | Adaptive look-ahead geometric steering |
-| `mpc.py` | 5.4 | Frenet-frame constrained MPC |
-| `lap_analyzer.py` | 5.5 | Lap timing, telemetry topics, RViz dashboard |
 
 ---
 
@@ -127,37 +121,45 @@ Notation: `L` wheelbase, `δ` front steering angle, `a` longitudinal acceleratio
 
 ### 4.1 Extended kinematic bicycle model (Milestone 2)
 
-Reference point is the rear-axle centre:
+Reference point is the rear-axle centre. State `x = [x, y, θ, v]`, inputs `u = [u_throttle, δ]`:
 
 ```
 ẋ = v · cos θ
 ẏ = v · sin θ
 θ̇ = (v / L) · tan δ
-v̇ = a(u_throttle, v)
+v̇ = k_a · u_throttle − c_drag · v · |v| − c_roll · v
 ```
 
-The acceleration includes the powertrain and resistive forces:
+The acceleration has three parts: the powertrain term `k_a · u_throttle` (negative `u_throttle` is mechanical braking and never drives the car backwards), quadratic aerodynamic drag `c_drag · v · |v|`, and rolling resistance `c_roll · v` (proportional to speed).
+
+**Simulator parameters** (ROS parameters of the `Car` node, with the defaults used in all experiments):
+
+| Parameter | Symbol | Value |
+|---|---|---|
+| Wheelbase | `L` | 1.25 m |
+| Time step | `Δt` | 0.1 s (10 Hz) |
+| Powertrain acceleration gain | `k_a` | 4.0 m/s² |
+| Aerodynamic drag coefficient | `c_drag` | 0.005 |
+| Rolling resistance coefficient | `c_roll` | 0.05 |
+| Maximum steering angle | `δ_max` | 35° (0.611 rad) |
+| Maximum speed | `v_max` | 25 m/s |
+| Wheel radius | — | 0.5 m |
+
+Derived quantities:
+- **Minimum turning radius:** `R_min = L / tan δ_max = 1.25 / tan 35° ≈ 1.79 m`.
+- **Top speed at full throttle:** at steady state `k_a = c_drag v² + c_roll v`, i.e. `0.005 v² + 0.05 v − 4 = 0`, which gives `v ≈ 23.7 m/s`, just below the 25 m/s clamp.
+
+**Forward Euler integration** (as implemented in `update_x`):
 
 ```
-a = k_thr · u_throttle − c_drag · v · |v| − c_roll · sign(v)
+x_{k+1} = x_k + ẋ_k · Δt        (applied to all four states)
+θ_{k+1} = wrap( θ_{k+1} )        wrap(θ) = atan2( sin θ, cos θ )
+v_{k+1} = clip( v_{k+1}, 0, v_max )
 ```
 
-where `k_thr` is the throttle gain, `c_drag` the aerodynamic drag coefficient and `c_roll` the rolling/friction term (values are defined in the simulator configuration).
+Heading wrapping keeps `θ ∈ (−π, π]`, and speed clamping keeps `v ∈ [0, v_max]`. Commands outside their limits are clamped on reception: steering to `±δ_max` and throttle to `[−1, 1]`, each with a warning in the log.
 
-**Forward Euler integration**
-
-```
-x_{k+1} = x_k + v_k cos θ_k · Δt
-y_{k+1} = y_k + v_k sin θ_k · Δt
-θ_{k+1} = wrap( θ_k + (v_k / L) tan δ_k · Δt )
-v_{k+1} = clamp( v_k + a_k · Δt, v_min, v_max )
-```
-
-Heading wrapping keeps `θ ∈ (−π, π]`:
-
-```
-wrap(θ) = atan2( sin θ, cos θ )
-```
+**ROS interface:** `/throttle` and `/steer` (`std_msgs/Float32`) in; `/state` (`nav_msgs/Odometry`), `/joint_states` (`sensor_msgs/JointState`, steering hinges and wheel rotation) and the `map → ego_racecar/base_link` TF out.
 
 ### 4.2 Teleoperation mapping (Milestone 3)
 
@@ -242,38 +244,58 @@ Let `α` be the angle between the vehicle heading and the line to the look-ahead
 
 Equivalent arc curvature: `κ = 2 sin α / L_d`. A larger `L_d` gives smoother but corner-cutting behaviour; a smaller `L_d` tracks tightly but oscillates.
 
-### 4.7 Extended kinematic MPC in the Frenet frame (Milestone 5.4)
+### 4.7 Extended kinematic MPC (Milestone 5.4)
 
-**Frenet error states** relative to the path (arc length `s`, curvature `κ(s)`):
+The controller (`KinematicBicycleMPC` in `mpc.py`) solves a nonlinear program at every control step with SciPy's SLSQP solver. It optimises the steering angle and the longitudinal acceleration over the horizon, using the same extended bicycle model and powertrain as the simulator.
 
-```
-ė_y = v sin e_ψ
-ė_ψ = (v / L) tan δ − κ(s) · v cos e_ψ / (1 − κ e_y)
-ṡ   = v cos e_ψ / (1 − κ e_y)
-v̇   = a
-```
+**Decision variables** over `N` steps: `u = [δ_0, a_0, δ_1, a_1, …, δ_{N−1}, a_{N−1}]`.
 
-State `z = [e_y, e_ψ, v]`, input `u = [a, δ]`. The model is discretised (forward Euler, step `Δt`) and linearised around the reference to give `z_{k+1} = A_k z_k + B_k u_k + c_k`.
-
-**Optimisation problem** over a horizon of `N` steps:
+**Prediction model** (forward Euler, step `Δt`, state `[x, y, θ, v]`):
 
 ```
-min   Σ_{k=0}^{N−1} [ q_y e_{y,k}² + q_ψ e_{ψ,k}² + q_v (v_k − v_ref,k)²
-                      + r_a a_k² + r_δ δ_k²
-                      + r_Δδ (δ_k − δ_{k−1})² + r_Δa (a_k − a_{k−1})² ]
-      + terminal cost  z_N^T P z_N
-
-s.t.  z_{k+1} = f(z_k, u_k)                         (prediction model)
-      δ_min ≤ δ_k ≤ δ_max                           (steering limits)
-      |δ_k − δ_{k−1}| ≤ Δδ_max                      (steering rate limit)
-      a_min ≤ a_k ≤ a_max                           (acceleration limits)
-      v_min ≤ v_k ≤ v_max
-      |e_{y,k}| ≤ e_{y,max}                         (track boundary, optional)
+x_{k+1} = x_k + v_k cos θ_k · Δt
+y_{k+1} = y_k + v_k sin θ_k · Δt
+θ_{k+1} = θ_k + (v_k / L) tan δ_k · Δt
+v_{k+1} = v_k + ( a_k − c_drag v_k |v_k| − c_roll v_k ) · Δt
 ```
 
-**Receding horizon:** only `u_0*` is applied; the problem is re-solved at the next control step with the horizon shifted forward.
+**Frenet-style errors.** At each predicted step the position error `(Δx, Δy)` to the reference point `(x_r, y_r, θ_r, v_r)` is rotated into the path frame:
 
-**Warm start:** the previous solution shifted by one step, `[u_1*, …, u_{N−1}*, u_{N−1}*]`, initialises the solver. This reduces solve time and keeps the optimiser near the previous (smooth) solution.
+```
+e_long =  cos θ_r · Δx + sin θ_r · Δy       (along the path)
+e_lat  = −sin θ_r · Δx + cos θ_r · Δy       (cross-track error)
+e_yaw  = wrap( θ − θ_r )
+e_v    = v − v_r
+```
+
+**Cost function:**
+
+```
+J = Σ_{k=0}^{N−1} [ w_lat e_lat² + w_long e_long² + w_yaw e_yaw² + w_v e_v²
+                    + w_steer δ_k² + w_dsteer (δ_k − δ_{k−1})² + w_accel a_k² ]
+```
+
+where `δ_{−1}` is the current steering angle.
+
+**Constraints** (box bounds on the inputs): `−δ_max ≤ δ_k ≤ δ_max` with `δ_max = 35°`, and `−k_a ≤ a_k ≤ k_a`.
+
+**Parameters used:**
+
+| Parameter | Value | Role |
+|---|---|---|
+| Horizon `N` | 10 steps | Prediction length |
+| Step `Δt` | 0.1 s | Horizon = 1.0 s |
+| `w_lat` | 30 | Cross-track error (main tracking term) |
+| `w_yaw` | 10 | Heading error |
+| `w_dsteer` | 6 | Steering rate (smoothness) |
+| `w_long`, `w_v` | 1, 1 | Along-track and speed errors |
+| `w_steer` | 0.2 | Steering effort |
+| `w_accel` | 0.1 | Acceleration effort |
+| Solver | SLSQP, `maxiter = 25`, `ftol = 1e-3` | Time-limited solve per step |
+
+**Receding horizon:** only the first input is applied. The steering command is `δ_0`, and the acceleration is mapped to the throttle command with `u_throttle = clip( a_0 / k_a, −1, 1 )`.
+
+**Warm start:** the previous solution shifted by one step, `[u_1*, …, u_{N−1}*, u_{N−1}*]`, initialises the solver (clipped to the bounds). If the solver returns a non-finite result, the warm start is used instead.
 
 ### 4.8 Telemetry and metrics (Milestone 5.5)
 
@@ -292,7 +314,7 @@ Published quantities: CTE, speed, heading error (deg), lap time. RViz shows the 
 
 ## 5. Benchmark Results
 
-Track: `centerline_0.csv` (≈ 528.2 m loop), curvature-based velocity profiler enabled (`velocity_mode:=curvature`), same longitudinal PID and start pose for all autonomous runs. Metrics are logged by `lap_analyzer.py` (three full laps per autonomous controller).
+Track: `centerline_0.csv` (≈ 528.2 m loop), curvature-based velocity profiler enabled (`velocity_mode:=curvature`), same longitudinal PID and start pose for all autonomous runs. Metrics are logged by `lap_analyzer.py` (three full laps per controller).
 
 ### 5.1 Summary
 
@@ -341,22 +363,17 @@ Mean CTE and RMS CTE are the averages of the per-lap values; Max CTE is the wors
 
 *Manual driving by keyboard is included as a human reference. Lap-to-lap results vary strongly with the driver's inputs (note the lap-2 excursion of 10.4 m and speed of 10.41 m/s). The lap analyzer's "best" value for lap 3 was reported as 274.05 s, which suggests lap 2 was recorded in a separate run; the summary uses all three laps.*
 
----|---|---|---|---|---|---|
-| 1 | 300.42 | 1.316 | 1.832 | 6.119 | 1.59 | 4.23 |
-
-*Only one manual lap was recorded; it serves as a human-driving reference and is not part of the three-lap controller comparison.*
-
 ---
 
 ## 6. Critical Comparison of the Controllers
 
 | Aspect | Lateral PID | Pure Pursuit | Extended Kinematic MPC |
 |---|---|---|---|
-| **Principle** | Reactive feedback on `e_y` and `e_ψ` | Geometric arc to a look-ahead point | Constrained optimisation over a prediction horizon |
+| **Principle** | Reactive feedback on `e_y` and `e_ψ` | Geometric arc to a look-ahead point | Constrained nonlinear optimisation (SLSQP) over a 1 s prediction horizon |
 | **Preview of the road** | None (reacts only after error appears) | Yes, single point at `L_d` | Yes, full horizon with curvature `κ(s)` |
 | **Use of vehicle model** | None | Kinematic geometry only | Full prediction model |
 | **Actuator limits** | Clamped after the fact | Clamped after the fact | Handled inside the optimisation |
-| **Tuning** | `K_p, K_i, K_d, K_ψ`; speed-dependent | Mainly `L_0`, `k_v` | Weights `Q, R`, horizon `N`, `Δt` |
+| **Tuning** | `K_p, K_i, K_d, K_ψ`; speed-dependent | Mainly `L_0`, `k_v` | Cost weights, horizon `N`, `Δt`, solver iterations |
 | **Compute cost** | Negligible | Negligible | Highest (solver per step) |
 | **Strengths** | Simple, easy to debug, cheap | Smooth, intuitive, robust on moderate curves | Best tracking, anticipates curvature, respects constraints, couples speed and steering |
 | **Weaknesses** | Lags in curves, steady-state error in constant-curvature sections without integral action, gains depend on speed | Cuts corners with large `L_d`, oscillates with small `L_d`, no constraint handling | Heavier to implement and tune, needs a solver, performance depends on model accuracy and solve time |
@@ -523,9 +540,7 @@ sudo apt install -y python3-colcon-common-extensions python3-pip \
     ros-$ROS_DISTRO-rqt-plot ros-$ROS_DISTRO-plotjuggler-ros
 
 # Python dependencies (adjust to the repository requirements)
-pip3 install numpy scipy matplotlib pandas
-# MPC solver (use the one imported in mpc.py, e.g.:)
-pip3 install cvxpy
+pip3 install numpy scipy matplotlib pandas   # SciPy provides the SLSQP solver used by mpc.py
 ```
 
 ### 9.2 Clone and build
@@ -570,8 +585,8 @@ With the base simulation running:
 
 ```bash
 # Direct actuator commands (verify the physics)
-ros2 topic pub /throttle std_msgs/msg/Float64 "{data: 0.5}" -r 10
-ros2 topic pub /steer std_msgs/msg/Float64 "{data: 0.2}" -r 10
+ros2 topic pub /throttle std_msgs/msg/Float32 "{data: 0.5}" -r 10
+ros2 topic pub /steer std_msgs/msg/Float32 "{data: 0.2}" -r 10
 
 # Interactive keyboard teleoperation
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
