@@ -292,15 +292,59 @@ Published quantities: CTE, speed, heading error (deg), lap time. RViz shows the 
 
 ## 5. Benchmark Results
 
-> **To be completed.** Results will be added after running at least **three full laps** per controller with the lap analyzer.
+Track: `centerline_0.csv` (≈ 528.2 m loop), curvature-based velocity profiler enabled (`velocity_mode:=curvature`), same longitudinal PID and start pose for all autonomous runs. Metrics are logged by `lap_analyzer.py` (three full laps per autonomous controller).
+
+### 5.1 Summary
+
+Mean CTE and RMS CTE are the averages of the per-lap values; Max CTE is the worst value over all laps; best lap time and top speed are the best/highest over all laps.
 
 | Controller | Laps completed | Best lap time (s) | Top speed (m/s) | Mean CTE (m) | Max CTE (m) | RMS CTE (m) |
 |---|---|---|---|---|---|---|
-| Lateral PID | | | | | | |
-| Pure Pursuit | | | | | | |
-| MPC | | | | | | |
+| Lateral PID | 3 | 85.84 | 7.66 | 0.435 | 3.713 | 0.635 |
+| Pure Pursuit | 3 | **68.02** | 7.59 | **0.065** | **0.363** | **0.087** |
+| MPC | 3 | 118.60 | 4.13 | 0.072 | 0.385 | 0.097 |
+| Manual teleoperation (reference) | 3 | 271.36 | 10.41 | 1.504 | 10.400 | 2.041 |
 
-*Test conditions: track `centerline_0.csv`, same velocity profile and longitudinal PID for all controllers, same start pose.*
+### 5.2 Per-lap results
+
+**Lateral PID**
+
+| Lap | Time (s) | Mean CTE (m) | RMS CTE (m) | Max CTE (m) | Mean v (m/s) | Max v (m/s) | Mean heading err. (deg) |
+|---|---|---|---|---|---|---|---|
+| 1 | 95.64 | 0.369 | 0.537 | 2.708 | 5.64 | 7.66 | 32.50 |
+| 2 | 85.84 | 0.494 | 0.734 | 3.713 | 6.21 | 7.63 | 38.07 |
+| 3 | 89.83 | 0.441 | 0.633 | 2.511 | 6.13 | 7.62 | 35.23 |
+
+**Pure Pursuit**
+
+| Lap | Time (s) | Mean CTE (m) | RMS CTE (m) | Max CTE (m) | Mean v (m/s) | Max v (m/s) |
+|---|---|---|---|---|---|---|
+| 1 | 75.61 | 0.061 | 0.085 | 0.275 | 5.91 | 7.59 |
+| 2 | 68.30 | 0.066 | 0.087 | 0.363 | 6.54 | 7.57 |
+| 3 | 68.02 | 0.067 | 0.088 | 0.363 | 6.57 | 7.56 |
+
+**MPC**
+
+| Lap | Time (s) | Mean CTE (m) | RMS CTE (m) | Max CTE (m) | Mean v (m/s) | Max v (m/s) |
+|---|---|---|---|---|---|---|
+| 1 | 127.91 | 0.072 | 0.098 | 0.385 | 3.69 | 4.13 |
+| 2 | 118.60 | 0.074 | 0.099 | 0.348 | 3.78 | 4.07 |
+| 3 | 118.73 | 0.071 | 0.095 | 0.385 | 3.77 | 4.12 |
+
+**Manual teleoperation (keyboard)**
+
+| Lap | Time (s) | Mean CTE (m) | RMS CTE (m) | Max CTE (m) | Mean v (m/s) | Max v (m/s) |
+|---|---|---|---|---|---|---|
+| 1 | 300.42 | 1.316 | 1.832 | 6.119 | 1.59 | 4.23 |
+| 2 | 271.36 | 2.027 | 2.747 | 10.400 | 2.18 | 10.41 |
+| 3 | 274.05 | 1.168 | 1.544 | 5.619 | 1.50 | 4.96 |
+
+*Manual driving by keyboard is included as a human reference. Lap-to-lap results vary strongly with the driver's inputs (note the lap-2 excursion of 10.4 m and speed of 10.41 m/s). The lap analyzer's "best" value for lap 3 was reported as 274.05 s, which suggests lap 2 was recorded in a separate run; the summary uses all three laps.*
+
+---|---|---|---|---|---|---|
+| 1 | 300.42 | 1.316 | 1.832 | 6.119 | 1.59 | 4.23 |
+
+*Only one manual lap was recorded; it serves as a human-driving reference and is not part of the three-lap controller comparison.*
 
 ---
 
@@ -323,7 +367,12 @@ Published quantities: CTE, speed, heading error (deg), lap time. RViz shows the 
 - *Pure Pursuit* adds a preview via the look-ahead point, which makes it smoother than PID and a good middle ground. Its single parameter trades responsiveness against smoothness, and the geometric law ignores dynamics and limits.
 - *MPC* gives the most accurate and anticipatory tracking because it plans over a horizon with the model and the actual constraints, at the price of computational cost and tuning complexity.
 
-*(Numerical conclusions from the benchmark table will be added once the results are available.)*
+**Results (Section 5).**
+- **Pure Pursuit** gave the best overall result: the fastest lap (68.02 s), a top speed of 7.59 m/s, and a mean CTE of 0.065 m with a maximum of 0.363 m.
+- **MPC** tracked almost as precisely (mean CTE 0.072 m, max 0.385 m, RMS 0.097 m), but it drove much slower: laps took about 118 s with a top speed of 4.13 m/s and a mean speed of about 3.7 m/s, versus about 6.5 m/s for Pure Pursuit. Its lateral error is therefore **not** better than Pure Pursuit in this benchmark, and the two runs were not made at the same speed. A fair comparison of tracking quality at equal speed would require raising the MPC's speed limit or capping Pure Pursuit to the same speed.
+- **Lateral PID** was the least accurate autonomous controller: mean CTE of 0.37–0.49 m (roughly 6–7 times that of Pure Pursuit), peak errors between 2.5 and 3.7 m, and slower, less consistent laps (85.84–95.64 s). This is consistent with a reactive controller that has no preview and reacts late to corners at 6–7.7 m/s. Its mean heading error (32–38°) is large and should be checked against how the heading error is computed in `lap_analyzer.py`.
+- **Manual teleoperation** is much worse than every autonomous controller: laps took 271–300 s (about 4 times slower than Pure Pursuit), with a mean CTE of 1.17–2.03 m and peaks up to 10.4 m, and the results varied widely from lap to lap. This shows the benefit of closed-loop control.
+- **Repeatability:** Pure Pursuit and MPC were very consistent from lap to lap (mean CTE varying by less than 0.01 m). Lateral PID varied more between laps in both error and lap time.
 
 ---
 
@@ -344,6 +393,8 @@ Published quantities: CTE, speed, heading error (deg), lap time. RViz shows the 
 7. **Receding horizon feedback.** Re-solving at each step with a warm start provides feedback correction against model mismatch and disturbances while still retaining the benefit of preview.
 
 **Caveat.** MPC's advantage depends on model fidelity and on solving within the control period; with a poor model or a late solution, a simple controller can outperform it.
+
+**Relation to our measurements.** The MPC clearly outperformed Lateral PID (mean CTE 0.072 m vs 0.435 m) and tracked with the same accuracy class as Pure Pursuit (0.072 m vs 0.065 m). It did not beat Pure Pursuit on cross-track error in our benchmark. The theoretical advantages above matter most when the track demands anticipation, such as at higher speeds or on tight curves, and the MPC run was limited to a top speed of about 4 m/s, so Pure Pursuit was operating in a much easier regime for tracking error (for a geometric controller, error grows with speed and curvature) while being much faster. At equal speed, or with a tighter track, the gap is expected to favour MPC; this was not tested here.
 
 ---
 
@@ -515,28 +566,18 @@ ros2 run plotjuggler plotjuggler
 
 ### 9.4 Manual driving and cruise control (Milestones 2–4)
 
-Run the simulation with the teleoperation bridge enabled in one terminal:
+With the base simulation running:
 
 ```bash
-source ~/control_ros2_ws/install/setup.bash
-ros2 launch bicycle_sim bicycle_sim.launch.py controller:=teleop
-```
+# Direct actuator commands (verify the physics)
+ros2 topic pub /throttle std_msgs/msg/Float64 "{data: 0.5}" -r 10
+ros2 topic pub /steer std_msgs/msg/Float64 "{data: 0.2}" -r 10
 
-In a **second terminal**, source the workspace and start the keyboard node:
-
-```bash
-source ~/control_ros2_ws/install/setup.bash
+# Interactive keyboard teleoperation
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
-The launch command occupies its terminal, so the keyboard node must run in a separate interactive terminal. The bridge subscribes to `/cmd_vel` and converts its `Twist` commands into throttle and steering. If no command is received for more than 0.5 s, the watchdog stops the car. The bridge is not started when `controller` is left at its default value, `none`.
-
-For a direct actuator check (not at the same time as teleoperation), publish `Float32` commands:
-
-```bash
-ros2 topic pub /throttle std_msgs/msg/Float32 "{data: 0.5}" -r 10
-ros2 topic pub /steer std_msgs/msg/Float32 "{data: 0.2}" -r 10
-```
+The teleoperation bridge converts the `Twist` commands into throttle and steering, and the linear velocity is used as the target speed of the longitudinal PID. If no command is received for more than 0.5 s, the watchdog stops the car.
 
 ### 9.5 Autonomous driving (Milestone 5)
 
