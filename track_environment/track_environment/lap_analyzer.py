@@ -319,8 +319,6 @@ class LapAnalyzer(Node):
                 mean_cte, rms_cte, max_cte),
             '  Heading error  : mean %.2f deg' % mean_herr_deg,
             '  Speed          : mean %.2f m/s | max %.2f m/s' % (mean_speed, max_speed),
-            '  Track length   : %.1f m (%d waypoints)' % (L, len(self.path_points)),
-            '  Total distance : %.1f m' % total_track_distance,
         ]
         self.get_logger().info('\n' + '\n'.join(lines))
 
