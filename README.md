@@ -585,6 +585,9 @@ ros2 topic pub /throttle std_msgs/msg/Float32 "{data: 0.5}" -r 10
 ros2 topic pub /steer std_msgs/msg/Float32 "{data: 0.2}" -r 10
 
 # Interactive keyboard teleoperation
+#run this base simulation
+ros2 launch bicycle_sim bicycle_sim.launch.py controller:=teleop
+#then in another terminal run
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
