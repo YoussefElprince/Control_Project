@@ -48,7 +48,6 @@ class KinematicBicycleMPC:
         x_init, y_init, yaw_init, v_init = [float(c) for c in x0]
         L, dt = self.L, self.dt
 
-        # Bounds: u = [delta_0, a_0, delta_1, a_1, ...]
         bounds = []
         for _ in range(N):
             bounds.append((-self.max_steer_rad, self.max_steer_rad))
