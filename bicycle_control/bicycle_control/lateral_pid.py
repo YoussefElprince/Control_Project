@@ -31,11 +31,9 @@ class LateralPIDController:
         d_cte = (cte - self.prev_cte) / self.dt
         self.prev_cte = cte
 
-        # Output before the integral update, used for the anti-windup decision
         u_pre = -(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte) \
                 - self.k_yaw * heading_err
 
-        # Anti-windup: skip integration while saturated and the error pushes deeper into saturation
         saturated = abs(u_pre) >= self.max_steer_rad
         if not (saturated and cte * u_pre < 0.0):
             self.integral_cte += cte * self.dt

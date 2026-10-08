@@ -20,9 +20,8 @@ class VelocityProfiler:
 
         k = abs(kappa)
         if k < 1e-4:
-            v = self.max_speed                       # straight: no curvature limit
+            v = self.max_speed
         else:
-            v = math.sqrt(self.max_lat_accel / k)    # v = sqrt(a_lat_max / |kappa|)
+            v = math.sqrt(self.max_lat_accel / k)
 
-        # Clamp: never above max_speed, and keep a 1 m/s floor so the car never stalls in a hairpin
         return max(1.0, min(self.max_speed, v))

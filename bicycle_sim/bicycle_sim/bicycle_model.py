@@ -39,7 +39,6 @@ class Car(Node):
         super().__init__('KinematicBicycle')
         self.get_logger().info('Drive-by-Wire Extended Kinematic Bicycle Model Initialized')
 
-        # Parameters
         self.declare_parameter('wheelbase_length', float(wheelbase_length))
         self.declare_parameter('dt', float(dt))
         self.declare_parameter('car_name', 'ego_racecar')
@@ -60,28 +59,24 @@ class Car(Node):
         self.max_speed = float(self.get_parameter('max_speed').value)
         self.wheel_radius = float(self.get_parameter('wheel_radius').value)
 
-        # State initialization [x, y, theta, v]
         default_x = [0.0, 0.0, 0.0, 0.0]
         self.x = np.array(xInitial if xInitial is not None else default_x, dtype=np.float64)
 
-        self.u = np.array([0.0, 0.0], dtype=np.float64)  # [u_throttle, delta (rad)]
+        self.u = np.array([0.0, 0.0], dtype=np.float64)  
         self.x_dot = np.zeros(4, dtype=np.float64)
         self.wheel_rotation = 0.0
 
-        # Dedicated TF broadcaster (created once)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
         # Publishers
         self.state_pub = self.create_publisher(Odometry, '/state', 10)
         self.joint_pub = self.create_publisher(JointState, '/joint_states', 10)
 
-        # Subscribers: High-level steering (rad) and low-level powertrain throttle [-1, 1]
         self.steering_sub = self.create_subscription(
             Float32, '/steer', self.steering_callback, 10)
         self.throttle_sub = self.create_subscription(
             Float32, '/throttle', self.throttle_callback, 10)
 
-        # Simulation timer
         self.timer = self.create_timer(self.dt, self.update_simulation)
 
     def steering_callback(self, msg: Float32):
@@ -136,7 +131,6 @@ class Car(Node):
         self.update_x_dot()
         self.update_x()
 
-        # Update wheel spin rotation based on actual speed
         if self.wheel_radius > 0:
             d_rot = self.x[3] * self.dt / self.wheel_radius
             self.wheel_rotation = (self.wheel_rotation + d_rot) % (2 * math.pi)

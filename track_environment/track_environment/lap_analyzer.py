@@ -21,8 +21,9 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 
 class LapAnalyzer(Node):
-    SEARCH_WINDOW = 80       # waypoints searched on each side of the last index
-    RELOCALIZE_DIST = 3.0    # m: if the windowed match is farther, search globally
+    SEARCH_WINDOW = 80
+    RELOCALIZE_DIST = 3.0
+
     def __init__(self):
         super().__init__('lap_analyzer')
         self.get_logger().info('Initializing Lap Analyzer Node...')
@@ -123,7 +124,7 @@ class LapAnalyzer(Node):
         cum = [0.0]
         for i in range(1, n + 1):
             a = pts[i - 1]
-            b = pts[i % n]  # i == n closes the loop back to point 0
+            b = pts[i % n]
             cum.append(cum[-1] + math.hypot(b[0] - a[0], b[1] - a[1]))
 
         self.path_points = pts
@@ -134,7 +135,6 @@ class LapAnalyzer(Node):
         self.raw_path_len = len(msg.poses)
         self.path_received = True
 
-        # A new path invalidates all progress tracking
         self.last_idx = None
         self.prev_s = None
 
@@ -201,9 +201,6 @@ class LapAnalyzer(Node):
         heading_err = math.atan2(math.sin(yaw - best_seg_yaw), math.cos(yaw - best_seg_yaw))
         return best_proj[0], best_proj[1], best_s, best_signed_cte, heading_err
 
-    # ------------------------------------------------------------------
-    # State handling
-    # ------------------------------------------------------------------
     def state_callback(self, msg: Odometry):
         """Processes vehicle odometry and updates progress, lap timing, and errors."""
         now_sec = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
@@ -237,9 +234,6 @@ class LapAnalyzer(Node):
         L = self.track_length
 
         if self.prev_s is None:
-            # First valid fix: start the first lap here.
-            # If the car sits just behind the start line, s is close to L, so use a
-            # negative starting progress.
             self.progress = s if s <= 0.5 * L else s - L
             self.prev_progress = self.progress
             self.next_lap_progress = L
@@ -255,7 +249,6 @@ class LapAnalyzer(Node):
             self.progress += ds
         self.prev_s = s
 
-        # Accumulate metrics
         abs_cte = abs(cte)
         self.lap_ctes.append(abs_cte)
         self.lap_heading_errors.append(abs(heading_err))
@@ -264,7 +257,6 @@ class LapAnalyzer(Node):
 
         self.current_lap_time = now_sec - self.lap_start_time
 
-        # Lap completes when cumulative forward progress reaches the next full lap
         if self.progress >= self.next_lap_progress:
             den = self.progress - self.prev_progress
             if den > 1e-9:
@@ -342,10 +334,6 @@ class LapAnalyzer(Node):
             self.best_lap_time, self.global_max_speed, self.lap_count))
         print('\n' + '\n'.join(rows) + '\n')
 
-
-    # ------------------------------------------------------------------
-    # Telemetry and visualization
-    # ------------------------------------------------------------------
     def publish_telemetry(self):
         """Periodically publishes numerical telemetry and RViz visual markers at 10 Hz."""
         self.cte_pub.publish(Float32(data=float(self.current_cte)))
@@ -376,7 +364,6 @@ class LapAnalyzer(Node):
         ma = MarkerArray()
         now = self.get_clock().now().to_msg()
 
-        # Marker 1: start/finish gate at the track origin
         if self.path_points:
             p0 = self.path_points[0]
             gate = Marker()
@@ -399,7 +386,6 @@ class LapAnalyzer(Node):
             gate.color.a = 0.7
             ma.markers.append(gate)
 
-        # Marker 2: CTE whisker (green when tracking well, red as error nears 1 m)
         if self.last_xy is not None and self.path_received:
             err = min(abs(self.current_cte), 1.0)
             whisker = Marker()
@@ -420,7 +406,6 @@ class LapAnalyzer(Node):
             ]
             ma.markers.append(whisker)
 
-        # Marker 3: floating scoreboard above the car
         if telemetry is not None and self.last_xy is not None:
             best = telemetry['best_lap_time']
             best_txt = '%.2f s' % best if best is not None else '--'
@@ -461,3 +446,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+    

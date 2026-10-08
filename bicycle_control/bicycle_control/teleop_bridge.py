@@ -39,11 +39,9 @@ class TeleopBridge(Node):
         self.auto_zero_timeout = float(self.get_parameter('auto_zero_timeout').value)
         self.use_cruise_control = bool(self.get_parameter('use_cruise_control').value)
 
-        # Publishers (10 Hz rate per assignment specification)
         self.throttle_pub = self.create_publisher(Float32, '/throttle', 10)
         self.steer_pub = self.create_publisher(Float32, '/steer', 10)
 
-        # Subscribers
         self.cmd_sub = self.create_subscription(Twist, '/cmd_vel', self.cmd_callback, 10)
 
         self.current_throttle = 0.0
@@ -57,7 +55,6 @@ class TeleopBridge(Node):
         self.state_sub = self.create_subscription(
             Odometry, '/state', self.odom_callback, 10)
 
-        # Publish loop at 10 Hz
         self.timer = self.create_timer(0.1, self.publish_commands)
 
     def odom_callback(self, msg: Odometry):

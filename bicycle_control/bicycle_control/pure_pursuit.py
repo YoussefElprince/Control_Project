@@ -26,11 +26,9 @@ class PurePursuitController:
         if n == 0:
             return 0, None
 
-        # Nearest waypoint to the car
         nearest = min(range(n),
                       key=lambda i: (path_points[i][0] - x) ** 2 + (path_points[i][1] - y) ** 2)
 
-        # Walk forward until a waypoint is at least `lookahead` meters away
         for k in range(n):
             i = (nearest + k) % n
             if math.hypot(path_points[i][0] - x, path_points[i][1] - y) >= lookahead:

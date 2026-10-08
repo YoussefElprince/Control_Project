@@ -41,23 +41,18 @@ class PIDLongitudinalController:
         d_term = -self.kd * d_meas
         self.prev_vel = current_vel
 
-        # Anti-windup (conditional integration): do not integrate while the
-        # output is saturated and the error would push it further into saturation.
         u_pre = p_term + self.ki * self.integral + d_term
         winding_up = ((u_pre > self.max_throttle and error > 0.0) or
                       (u_pre < -self.max_brake and error < 0.0))
         if not winding_up:
             self.integral += error * self.dt
-            # Hard clamp on the integral as a second safeguard
             self.integral = float(np.clip(self.integral,
                                           -self.integral_limit, self.integral_limit))
 
         u = p_term + self.ki * self.integral + d_term
 
-        # Saturate to actuator limits
         u = float(np.clip(u, -self.max_brake, self.max_throttle))
 
-        # Smooth the actuator output with a rate limit
         u = float(np.clip(u, self.prev_output - self.max_step,
                           self.prev_output + self.max_step))
 

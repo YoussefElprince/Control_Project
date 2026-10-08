@@ -18,7 +18,6 @@ except ImportError:
 def main(args=None):
     rclpy.init(args=args)
 
-    # Resolve track start pose
     track_file = DEFAULT_TRACK_FILE
     for i, arg in enumerate(sys.argv):
         if arg in ('--track', '-t') and i + 1 < len(sys.argv):
