@@ -48,20 +48,20 @@ class TeleopBridge(Node):
         self.current_steer = 0.0
         self.target_vel = 0.0
         self.last_cmd_time = self.get_clock().now()
-
+#phase 2
         self.current_speed = 0.0
         self.pid = PIDLongitudinalController(
             kp=1.0, ki=0.2, kd=0.05, dt=0.1, integral_limit=5.0)
         self.state_sub = self.create_subscription(
             Odometry, '/state', self.odom_callback, 10)
-
+#----------->
         self.timer = self.create_timer(0.1, self.publish_commands)
 
     def odom_callback(self, msg: Odometry):
         """Milestone 4.2: Extracts vehicle forward speed from /state odometry."""
         self.current_speed = float(msg.twist.twist.linear.x)
 
-    def cmd_callback(self, msg: Twist):
+    def cmd_callback(self, msg: Twist): #cmd_callback
         throttle = msg.linear.x / self.max_linear_vel
         steer = (msg.angular.z / self.max_angular_vel) * self.max_steer_rad
 
@@ -70,7 +70,7 @@ class TeleopBridge(Node):
         self.target_vel = max(0.0, float(msg.linear.x))
         self.last_cmd_time = self.get_clock().now()
 
-    def publish_commands(self):
+    def publish_commands(self): #publish_commands
         age = (self.get_clock().now() - self.last_cmd_time).nanoseconds * 1e-9
         if age > self.auto_zero_timeout:
             self.current_steer = 0.0

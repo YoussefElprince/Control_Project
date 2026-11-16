@@ -39,7 +39,7 @@ class KinematicBicycleMPC:
 
         self.last_u = np.zeros(2 * self.N)  # warm-start [delta_0, a_0, delta_1, a_1, ...]
 
-    def solve(self, x0, ref_trajectory, current_steer=0.0):
+    def solve(self, x0, ref_trajectory, current_steer=0.0): #solve
         N = min(self.N, len(ref_trajectory))
         if N < 2:
             return 0.0, 0.0
@@ -98,4 +98,4 @@ class KinematicBicycleMPC:
 
         delta_cmd = float(u_opt[0])
         throttle_cmd = float(np.clip(u_opt[1] / self.k_a, -1.0, 1.0))
-        return delta_cmd, throttle_cmd
+        return delta_cmd, throttle_cmd #------------------------------->

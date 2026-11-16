@@ -14,7 +14,7 @@ class VelocityProfiler:
         self.max_speed = max_speed
         self.max_lat_accel = max_lat_accel
 
-    def compute_target_speed(self, kappa, fallback_speed=None):
+    def compute_target_speed(self, kappa, fallback_speed=None): #compute_target_speed
         if kappa is None or not math.isfinite(kappa):
             return fallback_speed if fallback_speed is not None else self.default_speed
 
@@ -24,4 +24,4 @@ class VelocityProfiler:
         else:
             v = math.sqrt(self.max_lat_accel / k)
 
-        return max(1.0, min(self.max_speed, v))
+        return max(1.0, min(self.max_speed, v)) 

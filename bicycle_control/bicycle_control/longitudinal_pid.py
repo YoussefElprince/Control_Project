@@ -31,7 +31,7 @@ class PIDLongitudinalController:
         self.prev_output = 0.0
         self.max_step = 0.3
 
-    def compute(self, target_vel, current_vel):
+    def compute(self, target_vel, current_vel): #compute
         error = target_vel - current_vel
         p_term = self.kp * error
         if self.prev_vel is None:
@@ -58,7 +58,7 @@ class PIDLongitudinalController:
 
         self.prev_output = u
         self.prev_error = error
-        return u
+        return u #---------------------------->
 
     def reset(self):
         self.prev_vel = None

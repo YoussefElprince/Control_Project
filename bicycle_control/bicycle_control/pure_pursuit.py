@@ -18,10 +18,10 @@ class PurePursuitController:
         self.l_max = l_max
         self.max_steer_rad = max_steer_rad
 
-    def compute_lookahead(self, v):
+    def compute_lookahead(self, v): #compute_lookahead(self, v):
         return float(np.clip(self.kv * abs(v) + self.l_min, self.l_min, self.l_max))
 
-    def find_target_waypoint(self, x, y, path_points, lookahead):
+    def find_target_waypoint(self, x, y, path_points, lookahead): #find_target_waypoint
         n = len(path_points)
         if n == 0:
             return 0, None
@@ -36,7 +36,7 @@ class PurePursuitController:
 
         return nearest, path_points[nearest]
 
-    def compute_steering(self, x, y, yaw, target_pt, lookahead):
+    def compute_steering(self, x, y, yaw, target_pt, lookahead): #compute_steering
         if target_pt is None:
             return 0.0
 

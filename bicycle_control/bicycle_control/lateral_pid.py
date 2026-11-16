@@ -27,7 +27,7 @@ class LateralPIDController:
         self.integral_cte = 0.0
         self.prev_cte = 0.0
 
-    def compute_steering(self, cte, heading_err):
+    def compute_steering(self, cte, heading_err): # compute_steering 
         d_cte = (cte - self.prev_cte) / self.dt
         self.prev_cte = cte
 
@@ -43,7 +43,7 @@ class LateralPIDController:
         delta = -(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte) \
                 - self.k_yaw * heading_err
 
-        return float(np.clip(delta, -self.max_steer_rad, self.max_steer_rad))
+        return float(np.clip(delta, -self.max_steer_rad, self.max_steer_rad)) #------------------>
 
     def reset(self):
         """Resets integrator and previous error state."""
