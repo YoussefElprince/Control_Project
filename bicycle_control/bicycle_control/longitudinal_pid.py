@@ -16,9 +16,9 @@ class PIDLongitudinalController:
 
     def __init__(self, kp=1.0, ki=0.2, kd=0.05, dt=0.1,
                  max_throttle=1.0, max_brake=1.0, integral_limit=2.0):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
+        self.kp = kp  # tuning numbber control the response to the current speed
+        self.ki = ki  #controls how strongly the accumulated speed error affects the throttle or braking.
+        self.kd = kd  #control the response to how quickly the speed is changing
         self.dt = dt
         self.max_throttle = max_throttle
         self.max_brake = max_brake
@@ -31,7 +31,7 @@ class PIDLongitudinalController:
         self.prev_output = 0.0
         self.max_step = 0.3
 
-    def compute(self, target_vel, current_vel): #compute
+    def compute(self, target_vel, current_vel): #compute how much throttle or braking to apply
         error = target_vel - current_vel
         p_term = self.kp * error
         if self.prev_vel is None:
@@ -44,7 +44,7 @@ class PIDLongitudinalController:
         u_pre = p_term + self.ki * self.integral + d_term
         winding_up = ((u_pre > self.max_throttle and error > 0.0) or
                       (u_pre < -self.max_brake and error < 0.0))
-        if not winding_up:
+        if not winding_up: #(winding_up: exceeds max throttle, or , execeeds max braking)
             self.integral += error * self.dt
             self.integral = float(np.clip(self.integral,
                                           -self.integral_limit, self.integral_limit))
@@ -58,7 +58,7 @@ class PIDLongitudinalController:
 
         self.prev_output = u
         self.prev_error = error
-        return u #---------------------------->
+        return u #            +ve : thorttle / -ve: braking /0: neither
 
     def reset(self):
         self.prev_vel = None

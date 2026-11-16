@@ -39,32 +39,32 @@ class KinematicBicycleMPC:
 
         self.last_u = np.zeros(2 * self.N)  # warm-start [delta_0, a_0, delta_1, a_1, ...]
 
-    def solve(self, x0, ref_trajectory, current_steer=0.0): #solve
-        N = min(self.N, len(ref_trajectory))
+    def solve(self, x0, ref_trajectory, current_steer=0.0): #solve(betgarab  steering and acc commands/predict their result and chooses a plan with a low error)
+        N = min(self.N, len(ref_trajectory))  ##
         if N < 2:
             return 0.0, 0.0
 
         ref = [list(map(float, r)) for r in ref_trajectory[:N]]
-        x_init, y_init, yaw_init, v_init = [float(c) for c in x0]
+        x_init, y_init, yaw_init, v_init = [float(c) for c in x0]  ## read the current state
         L, dt = self.L, self.dt
 
         bounds = []
-        for _ in range(N):
+        for _ in range(N):  ###
             bounds.append((-self.max_steer_rad, self.max_steer_rad))
-            bounds.append((-self.k_a, self.k_a))
+            bounds.append((-self.k_a, self.k_a))   ###set el commands limits
 
         def objective(u):
             x, y, yaw, v = x_init, y_init, yaw_init, v_init
             prev_delta = current_steer
             cost = 0.0
             for k in range(N):
-                delta = u[2 * k]
-                a = u[2 * k + 1]
+                delta = u[2 * k]  #
+                a = u[2 * k + 1]  # reads the commmands le kol future step
 
-                x += v * math.cos(yaw) * dt
-                y += v * math.sin(yaw) * dt
-                yaw += (v / L) * math.tan(delta) * dt
-                v += (a - self.c_drag * v * abs(v) - self.c_roll * v) * dt
+                x += v * math.cos(yaw) * dt #
+                y += v * math.sin(yaw) * dt #
+                yaw += (v / L) * math.tan(delta) * dt #
+                v += (a - self.c_drag * v * abs(v) - self.c_roll * v) * dt #predicts the car’s new position,heading,speed
 
                 xr, yr, yaw_r, v_r = ref[k]
                 dx = x - xr
@@ -87,7 +87,7 @@ class KinematicBicycleMPC:
         hi = np.array([b[1] for b in bounds])
         u_init = np.clip(u_init, lo, hi)
 
-        res = minimize(objective, u_init, bounds=bounds, method='SLSQP',
+        res = minimize(objective, u_init, bounds=bounds, method='SLSQP', #dawar 3ala plan be cost 2a2al
                        options={'maxiter': 25, 'ftol': 1e-3})
 
         u_opt = res.x if np.all(np.isfinite(res.x)) else u_init
@@ -98,4 +98,4 @@ class KinematicBicycleMPC:
 
         delta_cmd = float(u_opt[0])
         throttle_cmd = float(np.clip(u_opt[1] / self.k_a, -1.0, 1.0))
-        return delta_cmd, throttle_cmd #------------------------------->
+        return delta_cmd, throttle_cmd  #delta_cmd: steering angle / ------------------------------>

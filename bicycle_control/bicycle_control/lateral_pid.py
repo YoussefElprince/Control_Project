@@ -28,11 +28,11 @@ class LateralPIDController:
         self.prev_cte = 0.0
 
     def compute_steering(self, cte, heading_err): # compute_steering 
-        d_cte = (cte - self.prev_cte) / self.dt
+        d_cte = (cte - self.prev_cte) / self.dt   #how fast the cross track error is changing
         self.prev_cte = cte
 
-        u_pre = -(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte) \
-                - self.k_yaw * heading_err
+        u_pre = -(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte) \ 
+                - self.k_yaw * heading_err   #steering calculation (mesh el final)
 
         saturated = abs(u_pre) >= self.max_steer_rad
         if not (saturated and cte * u_pre < 0.0):
@@ -41,9 +41,9 @@ class LateralPIDController:
                                               -self.integral_limit, self.integral_limit))
 
         delta = -(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte) \
-                - self.k_yaw * heading_err
+                - self.k_yaw * heading_err     #steering calculation(final)
 
-        return float(np.clip(delta, -self.max_steer_rad, self.max_steer_rad)) #------------------>
+        return float(np.clip(delta, -self.max_steer_rad, self.max_steer_rad)) #return steering angle in radian  ------->
 
     def reset(self):
         """Resets integrator and previous error state."""
