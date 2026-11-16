@@ -27,7 +27,7 @@ class LateralPIDController:
         self.integral_cte = 0.0
         self.prev_cte = 0.0
 
-    def compute_steering(self, cte, heading_err):
+    def compute_steering(self, cte, heading_err): #compute
         d_cte = (cte - self.prev_cte) / self.dt  # how fast the CTE is changing
         self.prev_cte = cte
 
