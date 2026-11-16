@@ -27,12 +27,13 @@ class LateralPIDController:
         self.integral_cte = 0.0
         self.prev_cte = 0.0
 
-    def compute_steering(self, cte, heading_err): # compute_steering 
-        d_cte = (cte - self.prev_cte) / self.dt   #how fast the cross track error is changing
+    def compute_steering(self, cte, heading_err):
+        d_cte = (cte - self.prev_cte) / self.dt  # how fast the CTE is changing
         self.prev_cte = cte
 
-        u_pre = -(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte) \ 
-                - self.k_yaw * heading_err   #steering calculation (mesh el final)
+        # Steering before the integral update (used for the anti-windup decision)
+        u_pre = (-(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte)
+                 - self.k_yaw * heading_err)
 
         saturated = abs(u_pre) >= self.max_steer_rad
         if not (saturated and cte * u_pre < 0.0):
