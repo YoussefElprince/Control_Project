@@ -105,7 +105,7 @@ class Car(Node):
 
         self.u[0] = throttle_input
 
-    def update_x_dot(self): #update_x_dot
+    def update_x_dot(self): #update_x_dot how fast each value changes------>
         theta = self.x[2]
         v = self.x[3]
         throttle = self.u[0]
@@ -119,7 +119,7 @@ class Car(Node):
         self.x_dot[3] = accel
 
 
-    def update_x(self): #update_x
+    def update_x(self): #update_x /updates position, heading, and speed ---------->
         self.x = self.x + self.x_dot * self.dt
         self.x[2] = math.atan2(math.sin(self.x[2]), math.cos(self.x[2]))
         self.x[3] = float(np.clip(self.x[3], 0.0, self.max_speed))
