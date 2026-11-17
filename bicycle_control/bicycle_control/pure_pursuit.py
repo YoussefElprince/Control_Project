@@ -18,8 +18,8 @@ class PurePursuitController:
         self.l_max = l_max
         self.max_steer_rad = max_steer_rad
 
-    def compute_lookahead(self, v): #compute_lookahead(self, v):
-        return float(np.clip(self.kv * abs(v) + self.l_min, self.l_min, self.l_max))
+    def compute_lookahead(self, v): #compute_lookahead(self, v): decides how far ahead the car should look
+        return float(np.clip(self.kv * abs(v) + self.l_min, self.l_min, self.l_max)) #kol ma tamshy faster lazam ta look ab3ad
 
     def find_target_waypoint(self, x, y, path_points, lookahead): #find_target_waypoint (choose a point on the path for the car to steer)
         n = len(path_points)
@@ -36,7 +36,7 @@ class PurePursuitController:
 
         return nearest, path_points[nearest]
 
-    def compute_steering(self, x, y, yaw, target_pt, lookahead): #compute_steering(calculates how much to turn the front wheels toward the target point)
+    def compute_steering(self, x, y, yaw, target_pt, lookahead): #compute_steering(calculates the (angle) to turn the front wheels toward the target point)
         if target_pt is None:
             return 0.0
 
@@ -49,5 +49,5 @@ class PurePursuitController:
         alpha = math.atan2(local_y, local_x) #angle between the car's forward direction and the target
         ld = max(math.hypot(dx, dy), 1e-3)  #the distance to the target
 
-        delta = math.atan2(2.0 * self.L * math.sin(alpha), ld) #steer angle to follow circular arc toward the target
+        delta = math.atan2(2.0 * self.L * math.sin(alpha), ld) #steer angle to follow circular arc from the car rear axis toward the target
         return float(np.clip(delta, -self.max_steer_rad, self.max_steer_rad)) #limit el steering angle and return it in radian
