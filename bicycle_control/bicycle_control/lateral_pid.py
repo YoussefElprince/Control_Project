@@ -33,9 +33,9 @@ class LateralPIDController:
 
         # Steering before the integral update (used for the anti-windup decision)
         u_pre = (-(self.kp * cte + self.ki * self.integral_cte + self.kd * d_cte)
-                 - self.k_yaw * heading_err)
+                 - self.k_yaw * heading_err) #steering calculation(not el final)
 
-        saturated = abs(u_pre) >= self.max_steer_rad
+        saturated = abs(u_pre) >= self.max_steer_rad #check winding up
         if not (saturated and cte * u_pre < 0.0):
             self.integral_cte += cte * self.dt
             self.integral_cte = float(np.clip(self.integral_cte,
