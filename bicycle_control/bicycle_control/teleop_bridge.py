@@ -78,7 +78,7 @@ class TeleopBridge(Node):
             if not self.use_cruise_control:
                 self.current_throttle = 0.0
 
-        if self.use_cruise_control:
+        if self.use_cruise_control:   #use_cruise_control == true: PID adjusts throttle/braking /False: throttle comes from driving command
             # Closed loop: linear.x is a target speed in m/s
             if self.target_vel == 0.0 and self.current_speed < 0.05:
                 self.pid.reset()

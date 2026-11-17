@@ -49,7 +49,7 @@ class PIDLongitudinalController:
             self.integral = float(np.clip(self.integral,
                                           -self.integral_limit, self.integral_limit))
 
-        u = p_term + self.ki * self.integral + d_term
+        u = p_term + self.ki * self.integral + d_term  # u = P + I + D / combine P I D
 
         u = float(np.clip(u, -self.max_brake, self.max_throttle))
 
