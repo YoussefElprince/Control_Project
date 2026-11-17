@@ -105,7 +105,7 @@ class Car(Node):
 
         self.u[0] = throttle_input
 
-    def update_x_dot(self): #update_x_dot how fast each value changes------>
+    def update_x_dot(self): #update_x_dot how fast position, heading, speed changes------>
         theta = self.x[2]
         v = self.x[3]
         throttle = self.u[0]
