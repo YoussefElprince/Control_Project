@@ -57,11 +57,11 @@ class TeleopBridge(Node):
 #----------->
         self.timer = self.create_timer(0.1, self.publish_commands)
 
-    def odom_callback(self, msg: Odometry):
+    def odom_callback(self, msg: Odometry): #odom_callback  read the actual velocity
         """Milestone 4.2: Extracts vehicle forward speed from /state odometry."""
         self.current_speed = float(msg.twist.twist.linear.x)
 
-    def cmd_callback(self, msg: Twist): #cmd_callback
+    def cmd_callback(self, msg: Twist): #cmd_callback bet2ra el commands ely gya men el keyboards
         throttle = msg.linear.x / self.max_linear_vel
         steer = (msg.angular.z / self.max_angular_vel) * self.max_steer_rad
 
@@ -70,7 +70,7 @@ class TeleopBridge(Node):
         self.target_vel = max(0.0, float(msg.linear.x))
         self.last_cmd_time = self.get_clock().now()
 
-    def publish_commands(self): #publish_commands
+    def publish_commands(self): #publish_commands  send throtle and steering to the car every 0.1 sec
         age = (self.get_clock().now() - self.last_cmd_time).nanoseconds * 1e-9
         if age > self.auto_zero_timeout:
             self.current_steer = 0.0
