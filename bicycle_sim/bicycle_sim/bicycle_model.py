@@ -105,7 +105,7 @@ class Car(Node):
 
         self.u[0] = throttle_input
 
-    def update_x_dot(self): #update_x_dot how fast position, heading, speed changes------>
+    def update_x_dot(self): #update_x_dot get the deriv(d/dt) of position(x y), heading, speed ------>
         theta = self.x[2]
         v = self.x[3]
         throttle = self.u[0]
@@ -115,14 +115,14 @@ class Car(Node):
         - self.c_roll * v)           
         self.x_dot[0] = v * math.cos(theta)
         self.x_dot[1] = v * math.sin(theta)
-        self.x_dot[2] = (v / self.wheelbase_length) * math.tan(delta)
+        self.x_dot[2] = (v / self.wheelbase_length) * math.tan(delta) #angular velocity
         self.x_dot[3] = accel
 
 
-    def update_x(self): #update_x /updates position, heading, and speed ---------->
-        self.x = self.x + self.x_dot * self.dt
-        self.x[2] = math.atan2(math.sin(self.x[2]), math.cos(self.x[2]))
-        self.x[3] = float(np.clip(self.x[3], 0.0, self.max_speed))
+    def update_x(self): #update_x /updates position(x y), heading, and speed ---------->
+        self.x = self.x + self.x_dot * self.dt  #Euler integration
+        self.x[2] = math.atan2(math.sin(self.x[2]), math.cos(self.x[2])) #5aly heading men -180 le 180
+        self.x[3] = float(np.clip(self.x[3], 0.0, self.max_speed))  #limit el velocity
 
         
 
