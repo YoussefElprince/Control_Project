@@ -273,7 +273,7 @@ class LapAnalyzer(Node):
 
         self.last_state_time = now_sec
 
-    def record_lap_completion(self, lap_duration):
+    def record_lap_completion(self, lap_duration): #record_lap_completion saves the results of a finished lap
         """Records finished lap and prints summary."""
         self.lap_count += 1
         self.last_lap_time = lap_duration
@@ -334,7 +334,7 @@ class LapAnalyzer(Node):
             self.best_lap_time, self.global_max_speed, self.lap_count))
         print('\n' + '\n'.join(rows) + '\n')
 
-    def publish_telemetry(self):
+    def publish_telemetry(self): #publish_telemetry(self) send live numerical information
         """Periodically publishes numerical telemetry and RViz visual markers at 10 Hz."""
         self.cte_pub.publish(Float32(data=float(self.current_cte)))
         self.speed_pub.publish(Float32(data=float(self.current_speed)))
@@ -359,8 +359,8 @@ class LapAnalyzer(Node):
         self.metrics_pub.publish(String(data=json.dumps(telemetry)))
         self.publish_rviz_markers(telemetry)
 
-    def publish_rviz_markers(self, telemetry=None):
-        """Renders start gate, error whisker, and on-screen HUD text in RViz."""
+    def publish_rviz_markers(self, telemetry=None): #display in RVIiz (green marker at the track start, coloured line show the car's sideways error)
+        """Renders start gate, error whisker, and on-screen HUD text in RViz.""" # display the text above the car(CTE,lap count, lap times)
         ma = MarkerArray()
         now = self.get_clock().now().to_msg()
 
@@ -386,6 +386,7 @@ class LapAnalyzer(Node):
             gate.color.a = 0.7
             ma.markers.append(gate)
 
+            #done: 
         if self.last_xy is not None and self.path_received:
             err = min(abs(self.current_cte), 1.0)
             whisker = Marker()
